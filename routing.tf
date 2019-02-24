@@ -20,8 +20,6 @@ resource "aws_route_table_association" "public_rt_association" {
 }
 
 
-
-
 # Private Route Table
 resource "aws_route_table" "private_route_table" {
   vpc_id = "${aws_vpc.main.id}"

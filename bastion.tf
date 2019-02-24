@@ -1,9 +1,9 @@
+
 # Define SSH key pair for our instances
 resource "aws_key_pair" "default" {
   key_name = "rootkey"
   public_key = "${file("${var.key_path}")}"
 }
-
 
 ################ BASTION HOST
 
@@ -67,60 +67,11 @@ resource "aws_instance" "bastion_host" {
   tags {
     Name = "bastion_host"
   }
-}
-
-
-
-############## BASTION HOST END
-
-
-# Define webserver inside the public subnet
-resource "aws_instance" "wb" {
-   ami  = "${var.rhel_ami}"
-   instance_type = "t2.micro"
-   key_name = "${aws_key_pair.default.id}"
-   subnet_id = "${aws_subnet.public_subnet.id}"
-   vpc_security_group_ids = ["${aws_security_group.sgweb.id}"]
-   associate_public_ip_address = true
-   source_dest_check = false
-   user_data = "${file("${var.web_bootstrap_path}")}"
-
-  tags {
-    Name = "webserver"
+  provisioner "remote-exec" {
+    inline = ["id"]
+  }
+  provisioner "local-exec" {
+        command = "ansible-playbook -u ubuntu -i ec2.py tag_Name_bastion_host ansible/setup_bastion.yml"
   }
 }
 
-
-# Define nfsserver inside the isolated subnet
-resource "aws_instance" "nfs" {
-   ami  = "${var.aws_ami}"
-   instance_type = "t2.micro"
-   key_name = "${aws_key_pair.default.id}"
-   subnet_id = "${aws_subnet.isolated_subnet.id}"
-   vpc_security_group_ids = ["${aws_security_group.sgnfs.id}"]
-   associate_public_ip_address = false
-   source_dest_check = false
-   user_data = "${file("${var.nfs_bootstrap_path}")}"
-
-  tags {
-    Name = "nfsserver"
-  }
-}
-
-
-
-# Define database inside the private subnet
-resource "aws_instance" "db" {
-   ami  = "${var.rhel_ami}"
-   instance_type = "t2.micro"
-   key_name = "${aws_key_pair.default.id}"
-   subnet_id = "${aws_subnet.private_subnet.id}"
-   vpc_security_group_ids = ["${aws_security_group.sgdb.id}"]
-   associate_public_ip_address = true
-   source_dest_check = false
-   user_data = "${file("${var.db_bootstrap_path}")}"
-
-  tags {
-    Name = "database"
-  }
-}
