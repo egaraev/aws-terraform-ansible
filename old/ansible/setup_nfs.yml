@@ -1,0 +1,5 @@
+---
+- name: Setup nfs server
+  hosts: all
+  roles:
+    - bootstrap

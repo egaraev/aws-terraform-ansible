@@ -1,0 +1,5 @@
+---
+- name: Setup database server
+  hosts: all
+  roles:
+    - bootstrap
