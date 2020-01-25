@@ -1,0 +1,5 @@
+---
+- name: Setup application server
+  hosts: all
+  roles:
+    - bootstrap
