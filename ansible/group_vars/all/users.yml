@@ -1,8 +1,0 @@
----
-users:
-  - eldar:
-    username: eldar
-    groups: devops
-    state: present
-    public_key: |
-      ssh-rsa XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

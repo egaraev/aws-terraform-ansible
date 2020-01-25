@@ -1,5 +1,0 @@
----
-- name: Setup webserver
-  hosts: all
-  roles:
-    - bootstrap

@@ -1,3 +1,0 @@
-Host 10.0.2.30 
-User ec2-user
-proxyCommand ssh -W %h:%p ec2-user@ec2-3-122-105-10.eu-central-1.compute.amazonaws.com
