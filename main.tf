@@ -9,7 +9,7 @@ resource "aws_key_pair" "root-ssh" {
 
  
 resource "aws_instance" "test-vm" {
-   ami = "ami-090f10efc254eaf55"
+   ami = "ami-03d58d844fbb322af"
    instance_type = "t2.micro"
    key_name = "root-ssh"
 }
