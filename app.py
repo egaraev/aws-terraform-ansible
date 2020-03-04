@@ -3,25 +3,12 @@ from bson.json_util import dumps
 from flask import Flask, request, jsonify
 import json
 import ast
-from importlib.machinery import SourceFileLoader
 from pymongo import MongoClient
 
 DATABASE = MongoClient()['restfulapi'] # DB_NAME
 DEBUG = True
 client = MongoClient('localhost', 27017)
 
-
-
-def parse_query_params(query_string):
-    """
-        Function to parse the query parameter string.
-        """
-    # Parse the query param string
-    query_params = dict(parse_qs(query_string))
-    # Get the value from the list
-    query_params = {k: v[0] for k, v in query_params.items()}
-    return query_params
-	
 	
 app = Flask(__name__)
 
@@ -30,6 +17,9 @@ app = Flask(__name__)
 db = client.restfulapi
 # Select the collection
 collection = db.users
+
+
+
 
 @app.route("/")
 def get_initial_response():
@@ -45,6 +35,20 @@ def get_initial_response():
     # Returning the object
     return resp
 
+
+@app.route("/api/v1/users", methods=['GET'])
+def fetch_users():
+	bucketList = collection
+	goals = []
+	goal = bucketList.find()
+	for j in goal:
+		j.pop('_id')
+		goals.append(j)
+	return jsonify(goals)		
+	
+
+
+	
 
 @app.route("/api/v1/users", methods=['POST'])
 def create_user():
@@ -75,44 +79,7 @@ def create_user():
         return "", 500
 
 
-@app.route("/api/v1/users", methods=['GET'])
-def fetch_users():
-    """
-       Function to fetch the users.
-       """
-    try:
-        # Call the function to get the query params
-        query_params = parse_query_params(request.query_string)
-        # Check if dictionary is not empty
-        if query_params:
 
-            # Try to convert the value to int
-            query = {k: int(v) if isinstance(v, str) and v.isdigit() else v for k, v in query_params.items()}
-
-            # Fetch all the record(s)
-            records_fetched = collection.find(query)
-
-            # Check if the records are found
-            if records_fetched.count() > 0:
-                # Prepare the response
-                return dumps(records_fetched)
-            else:
-                # No records are found
-                return "", 404
-
-        # If dictionary is empty
-        else:
-            # Return all the records as query string parameters are not available
-            if collection.find().count > 0:
-                # Prepare response if the users are found
-                return dumps(collection.find())
-            else:
-                # Return empty array if no users are found
-                return jsonify([])
-    except:
-        # Error while trying to fetch the resource
-        # Add message for debugging purpose
-        return "", 500
 
 
 @app.route("/api/v1/users/<user_id>", methods=['POST'])
