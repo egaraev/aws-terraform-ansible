@@ -38,13 +38,12 @@ def get_initial_response():
 
 @app.route("/api/v1/users", methods=['GET'])
 def fetch_users():
-	bucketList = collection
-	goals = []
-	goal = bucketList.find()
-	for j in goal:
+	users = []
+	user = collection.find()
+	for j in user:
 		j.pop('_id')
-		goals.append(j)
-	return jsonify(goals)		
+		users.append(j)
+	return jsonify(users)		
 	
 
 
