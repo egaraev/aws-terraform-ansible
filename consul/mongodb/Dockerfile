@@ -7,6 +7,7 @@ RUN pip3 install -r requirements.txt
 EXPOSE 27017
 COPY mongod.conf /etc/mongod.conf
 COPY mongod.conf /etc/mongod.conf.orig
+RUN mkdir -p /var/lib/mongodb
 ENTRYPOINT ["python3"]
 CMD ["config.py"]
 

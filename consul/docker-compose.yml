@@ -63,7 +63,8 @@ services:
   mongodb:
     build: ./mongodb
     volumes:
-      - ./mongodb:/mongodb_config
+      - ./mongodb:/mongod_config
+      - ~/data:/var/lib/mongodb
     ports:
       - "27017"
     links:
