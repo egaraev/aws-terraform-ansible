@@ -20,8 +20,7 @@ app = Flask(__name__)
 #run docker with mongodb   
 # docker run -d -p 27017:27017 -v ~/data:/data/db mongo
 db = client.restfulapi
-# Select the collection
-collection = db.items
+
 
 ##------
 user = db.users
