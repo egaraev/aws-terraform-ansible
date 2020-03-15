@@ -1,6 +1,8 @@
 version: '2'
 services:
   consul:
+#    build: ./consul-server 
+#   image: consul-server
     image: consul
     command: consul agent -server -dev -client=0.0.0.0 -ui -bootstrap -log-level warn
     ports:
@@ -36,8 +38,7 @@ services:
       - "5000"
     environment:
       - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/flask
-    links:
-      - consul  
+
 
   redis:
     build: ./redis

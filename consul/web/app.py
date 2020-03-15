@@ -8,7 +8,7 @@ host = socket.gethostname()
 
 @app.route('/')
 def hello_world():
-    return 'Welcome to Guvenlik-Kontrol webservice. Host ID: ' + str(host)
+    return 'Welcome to  webservice. Host ID: ' + str(host)
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0')

@@ -11,7 +11,7 @@ CONSUL_IP = subprocess.check_output(['getent', 'hosts', CONSUL_ALIAS]).decode().
 # create consul instance (not consul agent, just python instance)
 c = consul.Consul(host=CONSUL_IP, port=CONSUL_PORT)
 
-# add kv
+# add to kv
 MONGODB_IP = SELF_IP
 MONGODB_PORT = '27017'
 REGISTRY = ':'.join([MONGODB_IP, MONGODB_PORT])
