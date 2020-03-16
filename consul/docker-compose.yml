@@ -39,7 +39,17 @@ services:
     environment:
       - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/flask
 
-
+  auth:
+    build: ./auth
+    image: auth
+    volumes:
+      - ./auth:/auth
+    ports:
+      - "5001"
+    environment:
+      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/auth      
+      
+      
   redis:
     build: ./redis
     volumes:
