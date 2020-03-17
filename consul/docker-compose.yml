@@ -48,6 +48,17 @@ services:
       - "5001"
     environment:
       - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/auth      
+
+
+  crud:
+    build: ./crud
+    image: crud
+    volumes:
+      - ./crud:/crud
+    ports:
+      - "5002"
+    environment:
+      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/crud
       
       
   redis:
@@ -75,7 +86,7 @@ services:
     build: ./mongodb
     volumes:
       - ./mongodb:/mongod_config
-      - ~/data:/var/lib/mongodb
+      - /root/data:/var/lib/mongodb
     ports:
       - "27017"
     links:

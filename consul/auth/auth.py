@@ -51,61 +51,77 @@ secret="blabla"
 
 
 
-class ReusableForm(Form):
+class RegistrationForm(Form):
     first_name = TextField('Fisrt_Name:', validators=[validators.required()])
     last_name = TextField('Last_Name:', validators=[validators.required()])
     email = TextField('Email:', validators=[validators.required(), validators.Length(min=6, max=35)])
     password = TextField('Password:', validators=[validators.required(), validators.Length(min=3, max=35)])
 
+	
+	
+	
 @app.route("/", methods=["GET", "POST"])
 ## curl -X POST -F 'first_name=Eldar' -F 'last_name=Garayev'  -F 'email=1@1.ru' -F 'password=password'  http://localhost:5001/register
 def register():
-    form = ReusableForm(request.form)
+    form = RegistrationForm(request.form)
     print (form.errors)
-        
+   
     if request.method == "POST":
         email = request.form["email"]
         test = user.find_one({"email": email})
         if test:
             return jsonify(message="User Already Exist"), 409
         else:
-        #import jwt
+
             first_name = request.form["first_name"]
             last_name = request.form["last_name"]
             password = request.form["password"]
             password_hash=generate_password_hash(password)
             email = request.form["email"]
-            user_info = dict(first_name=first_name, last_name=last_name, email=email, password=password_hash)
-            user.insert_one(user_info)
-            return jsonify(message="User added sucessfully"), 201
-        if form.validate():
-        # Save the comment here.
-            flash('Thanks for registration ' + first_name)
-        else:
-            flash('Error: All the form fields are required. ')
+            if first_name!="" and last_name!="" and password!="" and email!="":
+                user_info = dict(first_name=first_name, last_name=last_name, email=email, password=password_hash)
+                user.insert_one(user_info)
+                return jsonify(message="User added sucessfully"), 201
+            else:
+                return jsonify(message="Error: All the form fields are required"), 409    
+				
+#            return jsonify(message="User added sucessfully"), 201
+#            if form.validate():
+            # Save the comment here.
+#                flash('Thanks for registration ' + first_name)
+#            else:
+#                flash('Error: All the form fields are required. ')
   
     return render_template('register.html', form=form)
 
 
-@app.route("/login", methods=["POST"])
+class LoginForm(Form):
+    email = TextField('Email:')
+    password = TextField('Password:')	
+	
+@app.route("/login", methods=["GET", "POST"])
 ## curl -d '{"email": "1@1.ru", "password": "password"}' -H "Content-Type: application/json" -X POST http://localhost:5001/login
 def login():
+    form = LoginForm(request.form)
+    print (form.errors)
+
+    
     if request.is_json:
         email = request.json["email"]
         password = request.json["password"]
-    else:
-        email = request.form["email"]
-        password = request.form["password"]
-
 		
-    hashed_pass=user.find_one({"email": email})
-    hashed_pass = hashed_pass['password']
-    if check_password_hash(hashed_pass, password):
+    if request.method == "POST":
+       email = request.form["email"]
+       password = request.form["password"]
+       hashed_pass=user.find_one({"email": email})
+       hashed_pass = hashed_pass['password']
+       if check_password_hash(hashed_pass, password):
 	
-        access_token = create_access_token(identity=email)
-        return jsonify(message="Login Succeeded!", access_token=access_token), 201
-    else:
-        return jsonify(message="Bad Email or Password"), 401
+           access_token = create_access_token(identity=email)
+           return jsonify(message="Login Succeeded!", access_token=access_token), 201
+       else:
+           return jsonify(message="Bad Email or Password"), 401
+    return render_template('login.html', form=form)
 
 #app.run(debug=True)
 if __name__ == '__main__':
