@@ -1,8 +1,6 @@
 version: '2'
 services:
   consul:
-#    build: ./consul-server 
-#   image: consul-server
     image: consul
     command: consul agent -server -dev -client=0.0.0.0 -ui -bootstrap -log-level warn
     ports:
@@ -21,44 +19,53 @@ services:
     links:
       - consul
             
-  web:
-    build: ./web
-    ports:
-      - "5000"
-    environment:
-      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/web
-    volumes:
-      - .:/code
+#  web:
+#    build: ./web
+#    ports:
+#      - "5000"
+#    environment:
+#      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/web
+#    volumes:
+#      - .:/code
 
-  flaskapp:
-    build: ./flaskapp
-    volumes:
-      - ./flaskapp:/flaskapp
-    ports:
-      - "5000"
-    environment:
-      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/flask
-
-  auth:
-    build: ./auth
-    image: auth
-    volumes:
-      - ./auth:/auth
-    ports:
-      - "5001"
-    environment:
-      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/auth      
-
+#  flaskapp:
+#    build: ./flaskapp
+#    volumes:
+#      - ./flaskapp:/flaskapp
+#    ports:
+#      - "5000"
+#    environment:
+#      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/flask
 
   crud:
-    build: ./crud
-    image: crud
-    volumes:
-      - ./crud:/crud
+    build: ./crud_mongo
+    image: crud_mongo
     ports:
-      - "5002"
+      - "5000"
     environment:
-      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/crud
+      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:sub1.localhost      
+
+
+  webinterface:
+    build: ./webinterface
+    image: webinterface
+    ports:
+      - "5000"
+    environment:
+      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:mgmt.localhost
+
+      
+  trading:
+    build: ./trading
+    links:
+     - mysqldb    
+     
+  debug:
+    build: ./debug
+    environment:
+      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/debug
+    links:
+     - mysqldb 
       
       
   redis:
@@ -85,12 +92,12 @@ services:
   mongodb:
     build: ./mongodb
     volumes:
-      - ./mongodb:/mongod_config
-      - /root/data:/var/lib/mongodb
+      - ./mongodb:/mongodb_config
+      - ./mongo_db:/data/db
     ports:
       - "27017"
-    links:
-      - web     
+#    links:
+#      - web     
       
   registrator:
     depends_on:
@@ -101,3 +108,32 @@ services:
       - /var/run/docker.sock:/tmp/docker.sock
     links:
       - consul
+      
+      
+  mysqldb:
+    build: ./mysqldb
+#    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    restart: always
+    volumes:
+      - ./mysql_db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_USER=root
+    links:
+      - consul 
+      
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+     - PMA_ARBITRARY=1
+     - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/phpmyadmin/
+    restart: always
+    links:
+     - mysqldb
+    ports:
+     - 81:80
+    volumes:
+     - /sessions
+
+

@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify, render_template, flash
 import json
 import ast
 from pymongo import MongoClient
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, jwt_refresh_token_required, create_refresh_token,get_jwt_identity, set_access_cookies, set_refresh_cookies, unset_jwt_cookies
 from werkzeug.security import generate_password_hash, check_password_hash
 from wtforms import Form, TextField, TextAreaField, validators, StringField, SubmitField
 from flask_wtf import FlaskForm
@@ -46,6 +46,9 @@ user = db.users
 jwt = JWTManager(app)
 
 # JWT Config
+#app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+#app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
+#app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 app.config["JWT_SECRET_KEY"] = "blablabla"
 secret="blabla"
 
@@ -65,7 +68,9 @@ class RegistrationForm(Form):
 def register():
     form = RegistrationForm(request.form)
     print (form.errors)
-   
+
+
+	
     if request.method == "POST":
         email = request.form["email"]
         test = user.find_one({"email": email})
@@ -78,19 +83,10 @@ def register():
             password = request.form["password"]
             password_hash=generate_password_hash(password)
             email = request.form["email"]
-            if first_name!="" and last_name!="" and password!="" and email!="":
-                user_info = dict(first_name=first_name, last_name=last_name, email=email, password=password_hash)
-                user.insert_one(user_info)
-                return jsonify(message="User added sucessfully"), 201
-            else:
-                return jsonify(message="Error: All the form fields are required"), 409    
-				
-#            return jsonify(message="User added sucessfully"), 201
-#            if form.validate():
-            # Save the comment here.
-#                flash('Thanks for registration ' + first_name)
-#            else:
-#                flash('Error: All the form fields are required. ')
+            user_info = dict(first_name=first_name, last_name=last_name, email=email, password=password_hash)
+            user.insert_one(user_info)
+        return jsonify(message="User added sucessfully"), 201
+
   
     return render_template('register.html', form=form)
 
@@ -113,14 +109,20 @@ def login():
     if request.method == "POST":
        email = request.form["email"]
        password = request.form["password"]
-       hashed_pass=user.find_one({"email": email})
-       hashed_pass = hashed_pass['password']
-       if check_password_hash(hashed_pass, password):
+       test = user.find_one({"email": email})
+       hashed_password=user.find_one({"email": email})
+       hashed_pass = hashed_password['password']
 	
-           access_token = create_access_token(identity=email)
-           return jsonify(message="Login Succeeded!", access_token=access_token), 201
+       if test and check_password_hash(hashed_pass, password):
+#          hashed_pass=user.find_one({"email": email})
+#          hashed_pass = hashed_pass['password']
+#          if check_password_hash(hashed_pass, password):
+          access_token = create_access_token(identity=email)
+          resp = jsonify({'login': True}, {'Access_token': access_token})
+#          set_access_cookies(resp, access_token)
+          return resp, 200
        else:
-           return jsonify(message="Bad Email or Password"), 401
+          return jsonify(message="Bad Email or Password"), 409
     return render_template('login.html', form=form)
 
 #app.run(debug=True)
