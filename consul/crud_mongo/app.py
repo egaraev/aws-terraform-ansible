@@ -6,9 +6,10 @@ from pymongo import MongoClient
 import os
 import json
 import ast
+import time
 
 
-#time.sleep(5) # seconds
+time.sleep(5) # seconds
 
 # fetch consul's ip, so that we can talk to it.
 CONSUL_ALIAS = 'consul'
@@ -26,8 +27,8 @@ app = Flask(__name__)
 DATABASE = MongoClient()['restfulapi'] # DB_NAME
 DEBUG = True
 client = MongoClient(mongodb_ip, 27017)
-title = "Sample application with Flask and MongoDB"
-heading = "Reminder with Flask and MongoDB"
+title = "Flask and MongoDB"
+heading = "Reminder"
 
 db = client.restfulapi
 todos = db.todo #Select the collection name

@@ -37,6 +37,15 @@ services:
 #    environment:
 #      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/flask
 
+  redisapp:
+    build: ./redisapp
+    ports:
+      - "5000"
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+
   crud:
     build: ./crud_mongo
     image: crud_mongo
@@ -131,6 +140,8 @@ services:
     restart: always
     links:
      - mysqldb
+    depends_on:
+      - mysqldb
     ports:
      - 81:80
     volumes:
