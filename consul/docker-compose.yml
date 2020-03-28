@@ -37,6 +37,15 @@ services:
 #    environment:
 #      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/flask
 
+
+  logmongo:
+    build: ./logmongo
+    image: logmongo
+    ports:
+      - "5000"
+    depends_on:
+      - mongodb
+
   redisapp:
     build: ./redisapp
     ports:

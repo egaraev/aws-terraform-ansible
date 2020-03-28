@@ -9,9 +9,30 @@ import hashlib
 import MySQLdb
 import sys
 import smtplib
+from bson.json_util import dumps
+from flask import Flask, request, jsonify
+import ast
+import time
+import json
+import datetime
+import flask, os, socket, subprocess, requests, json, consul
+import urllib2
+
+from pymongo import MongoClient
 #c = Client(api_key=config.key, api_secret=config.secret)   #Configuring bytrex client with API key/secret from config file
 c=Client(api_key="", api_secret="")
 c1 = Client(api_key=config.key, api_secret=config.secret)   #Configuring bytrex client with API key/secret from config file
+
+# fetch consul's ip, so that we can talk to it.
+CONSUL_ALIAS = 'consul'
+CONSUL_PORT = '8500'
+CONSUL_IP = subprocess.check_output(['getent', 'hosts', CONSUL_ALIAS]).decode().split()[0]
+# create consul instance (not agent, just python instance)
+con = consul.Consul(host=CONSUL_IP, port=CONSUL_PORT)
+
+
+
+
 #The main function
 def main():
     print('Starting buy module')
@@ -20,6 +41,11 @@ def main():
 ################################################################################################################
 #what will be done every loop iteration
 def tick():
+    # get logmongo IP
+    keyindex, logmongo_ip_bytes = con.kv.get('logmongo')
+    logmongo_ip = logmongo_ip_bytes['Value'].decode()
+    API_ENDPOINT = "http://"+logmongo_ip+"/api/v1/items"
+	
     buy_size = parameters()[0] #The size for opening orders for STOP_LOSS mode
     max_buy_timeout = parameters()[1]
     stop_bot_force = parameters()[4]  #If stop_bot_force==1 we  stop bot and close all orders
@@ -32,7 +58,16 @@ def tick():
     max_orders = parameters()[5]
     current_order_count = order_count()
     bot_mode=parameters()[23]
+    now = datetime.datetime.now()
     print "Global buy parameters configured, moving to market loop"
+
+    req = urllib2.Request(API_ENDPOINT)
+    req.add_header('Content-Type', 'application/json')
+#    data = {"desc": "Global buy parameters configured, moving to market loop", "date": currtime}
+#    response = urllib2.urlopen(req, json.dumps(data))
+#    print("The  URL is:%s"%API_ENDPOINT) 
+
+
 
 
     #global active
@@ -189,7 +224,7 @@ def tick():
                     #spread=((ask/bid)-1)*100
                     print "Starting buying mechanizm for " , market
 
-                    if ((stop_bot == 0)): # and candles_status!='DOWN' :
+                    if ((stop_bot == 0)) and candles_status!='DOWN' :
                             #balance_res = get_balance_from_market(market)
                             #current_balance = balance_res['result']['Available']
 
@@ -233,6 +268,8 @@ def tick():
                                     printed = ('    4- Purchasing (by ai_ha) '  + str(
                                         format_float(buy_quantity)) + ' units of ' + market + ' for ' + str(
                                         format_float(newask)))
+                                    data = {"desc": printed, "date": currtime}
+                                    response = urllib2.urlopen(req, json.dumps(data))
                                     db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                     cursor = db.cursor()
                                     cursor.execute(

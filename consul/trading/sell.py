@@ -9,9 +9,25 @@ import hashlib
 import MySQLdb
 import sys
 import smtplib
+from bson.json_util import dumps
+from flask import Flask, request, jsonify
+import ast
+import time
+import json
+import datetime
+import flask, os, socket, subprocess, requests, json, consul
+import urllib2
+from pymongo import MongoClient
 #c = Client(api_key=config.key, api_secret=config.secret)   #Configuring bytrex client with API key/secret from config file
 c=Client(api_key="", api_secret="")
 c1 = Client(api_key=config.key, api_secret=config.secret)   #Configuring bytrex client with API key/secret from config file
+
+# fetch consul's ip, so that we can talk to it.
+CONSUL_ALIAS = 'consul'
+CONSUL_PORT = '8500'
+CONSUL_IP = subprocess.check_output(['getent', 'hosts', CONSUL_ALIAS]).decode().split()[0]
+# create consul instance (not agent, just python instance)
+con = consul.Consul(host=CONSUL_IP, port=CONSUL_PORT)
 
 TICK_INTERVAL = 60  # seconds
 
@@ -33,6 +49,12 @@ def main():
 ################################################################################################################
 #what will be done every loop iteration
 def tick():
+    # get logmongo IP
+    keyindex, logmongo_ip_bytes = con.kv.get('logmongo')
+    logmongo_ip = logmongo_ip_bytes['Value'].decode()
+    API_ENDPOINT = "http://"+logmongo_ip+"/api/v1/items"
+    req = urllib2.Request(API_ENDPOINT)
+    req.add_header('Content-Type', 'application/json')
     buy_size = parameters()[0] #The size for opening orders for STOP_LOSS mode
     stop_bot_force = parameters()[4]  #If stop_bot_force==1 we  stop bot and close all orders
     stop_bot = int(parameters()[11])
@@ -190,7 +212,7 @@ def tick():
                     try:
                         db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                         cursor = db.cursor()
-                        cursor.execute('SELECT GROUP_CONCAT(signals) FROM orderlogs where orderid=("%s")' % orderid)
+                        cursor.execute('SELECT GROUP_CONCAT(signals) FROM orderlogs where id=("%s")' % orderid)
                         history = cursor.fetchone()
                         cursor.execute('update orders set history=%s where order_id=%s',(history, orderid))
                         db.commit()
@@ -207,6 +229,8 @@ def tick():
                             try:
                                 printed = ('    33 -Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(newbid)) + '  and getting or loosing  ' + str(format_float(serf*BTC_price)) + ' USD')
                                 db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+                                data = {"desc": printed, "date": currtime}
+                                response = urllib2.urlopen(req, json.dumps(data))
                                 cursor = db.cursor()
                                 cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (currenttime, printed))
                                 cursor.execute('update orders set reason_close =%s, sell_time=%s where active=1 and market =%s', ("33 , Force_stop_bot p:    " + str(format_float(newbid)) + "    t:   " + str(currenttime),currtime, market))
@@ -229,6 +253,8 @@ def tick():
                         try:
                             printed = ("    XXX - Bot is working with " + market)
                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+                            data = {"desc": printed, "date": currtime}
+                            response = urllib2.urlopen(req, json.dumps(data))
                             cursor = db.cursor()
                             cursor.execute(
                                 'insert into logs(date, log_entry) values("%s", "%s")' % (
@@ -251,9 +277,9 @@ def tick():
                         elif bought_quantity_sql > 0:
                             ##Check if we have completelly green candle
 
+							
 
-                            if ((serf_usd > 0 and max_percent_sql - procent_serf >= 0.2 and 1.5>=max_percent_sql >= 1.0 and fivemin=='D') or (serf_usd > 0 and max_percent_sql - procent_serf >= 0.1 and 1.0>=max_percent_sql >= 0.7 )  or (serf_usd > 0 and max_percent_sql - procent_serf >= 0.5 and 2.0>=max_percent_sql >= 1.5 and fivemin=='D') or (serf_usd > 0 and max_percent_sql - procent_serf >= 1.0 and 3.0>=max_percent_sql >= 2.0 and fivemin=='D') or max_percent_sql>7.0 and slow_market==1)\
-                                        or  ((serf_usd > 0 and max_percent_sql - procent_serf >= 0.2 and 1.5>=max_percent_sql >= 0.8) or (serf_usd > 0 and max_percent_sql - procent_serf >= 1.5 and 3.0>=max_percent_sql >= 2.0 and fivemin=='D') or max_percent_sql>10.0  and slow_market==0):
+                            if (serf_usd > 0 ):
                                 print ('   6 -Selling ' + str(format_float(
                                     sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                     format_float(newbid)) + '  and getting  +' + str(format_float(
@@ -267,6 +293,8 @@ def tick():
                                         ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' + ' or ' + str(
                                         format_float((
                                                          newbid * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
+                                    data = {"desc": printed, "date": currtime}
+                                    response = urllib2.urlopen(req, json.dumps(data))
                                     db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                     cursor = db.cursor()
                                     cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (
@@ -308,6 +336,8 @@ def tick():
                                     try:
                                         printed = (
                                             "    7 - We have GREEN candle for " + market + " and let`s wait it to be up")
+                                        data = {"desc": printed, "date": currtime}
+                                        response = urllib2.urlopen(req, json.dumps(data))
                                         db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                         cursor = db.cursor()
                                         cursor.execute(
@@ -329,6 +359,8 @@ def tick():
 
                                     try:
                                         printed = ("   8  - We have good short term trend for " + market)
+                                        data = {"desc": printed, "date": currtime}
+                                        response = urllib2.urlopen(req, json.dumps(data))
                                         db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                         cursor = db.cursor()
                                         cursor.execute(
@@ -357,6 +389,8 @@ def tick():
                                                 sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                             format_float(ask)) + '  and get  + ' + str(
                                             format_float(serf * BTC_price)) + ' USD')
+                                        data = {"desc": printed, "date": currtime}
+                                        response = urllib2.urlopen(req, json.dumps(data))
                                         db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                              "cryptodb")
                                         cursor = db.cursor()
@@ -398,7 +432,7 @@ def tick():
 
 
 
-                                if serf_usd<0 and max_percent_sql<=0.5 and procent_serf==min_percent_sql and  timestamp - timestamp_old > 7200:
+                                if serf_usd<0 and max_percent_sql<=0.5 and procent_serf==min_percent_sql:
                                         print ('  12 -Selling ' + str(format_float(
                                         sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                         format_float(newbid)) + '  and losing  ' + str(format_float(
@@ -413,6 +447,8 @@ def tick():
                                                 ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' + ' or ' + str(
                                                 format_float((
                                                              newbid * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
+                                            data = {"desc": printed, "date": currtime}
+                                            response = urllib2.urlopen(req, json.dumps(data))
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                             cursor = db.cursor()
                                             cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (
@@ -447,7 +483,7 @@ def tick():
 
 
 
-                                elif (ai_prediction(market) != 'NEUTRAL' and ai_prediction(market) == 'DOWN') and newbid > bought_price_sql * ( 1 + profit/3) and currtime-ai_time_second<7200 and last<hourcurrentopen:  # #WAS profit2
+                                elif newbid > bought_price_sql * ( 1 + profit/3) and last<hourcurrentopen:  # #WAS profit2
                                         print ('    14  - Trying to sell ' + str(
                                         format_float(
                                             sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
@@ -460,6 +496,8 @@ def tick():
                                                     sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                                 format_float(newbid)) + '  and get  + ' + str(
                                                 format_float(serf * BTC_price)) + ' USD')
+                                            data = {"desc": printed, "date": currtime}
+                                            response = urllib2.urlopen(req, json.dumps(data))
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                  "cryptodb")
                                             cursor = db.cursor()
@@ -624,7 +662,7 @@ def tick():
     #                                         db.close()
                                     #Mail("egaraev@gmail.com", "egaraev@gmail.com", "New sell", printed,"mysqldb")
 
-                                elif ((newbid * (1 + profit / 2) < (bought_price_sql )) or procent_serf==min_percent_sql) and (sell_signal != 0): # #WAS profit2
+                                elif (newbid * (1 + profit / 2) < (bought_price_sql )): # #WAS profit2
 
                                          print ('   16  -Trying to Sell ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(newbid)) + '  and lose  ' + str(format_float(serf * BTC_price)) + ' USD')
                                     # print ('Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(ask)) + '  and losing  ' + str(format_float(ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' ' or ' + str(format_float((ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
@@ -634,6 +672,8 @@ def tick():
                                                      sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                                  format_float(newbid)) + '  and lose  ' + str(
                                                  format_float(serf * BTC_price)) + ' USD')
+                                             data = {"desc": printed, "date": currtime}
+                                             response = urllib2.urlopen(req, json.dumps(data))
                                              db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                   "cryptodb")
                                              cursor = db.cursor()
@@ -679,6 +719,8 @@ def tick():
                                                     sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                                 format_float(newbid)) + '  and get + ' + str(
                                                 format_float(serf * BTC_price)) + ' USD')
+                                            data = {"desc": printed, "date": currtime}
+                                            response = urllib2.urlopen(req, json.dumps(data))
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                  "cryptodb")
                                             cursor = db.cursor()
@@ -727,6 +769,8 @@ def tick():
                                                     sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                                 format_float(newbid)) + '  and get or lose  ' + str(
                                                 format_float(serf * BTC_price)) + ' USD')
+                                            data = {"desc": printed, "date": currtime}
+                                            response = urllib2.urlopen(req, json.dumps(data))
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                  "cryptodb")
                                             cursor = db.cursor()
@@ -767,6 +811,8 @@ def tick():
                                                         sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                                     format_float(newbid)) + '  and lose  ' + str(
                                                     format_float(serf * BTC_price)) + ' USD')
+                                                data = {"desc": printed, "date": currtime}
+                                                response = urllib2.urlopen(req, json.dumps(data))
                                                 db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                      "cryptodb")
                                                 cursor = db.cursor()
