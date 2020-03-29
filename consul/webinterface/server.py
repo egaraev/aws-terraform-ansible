@@ -1,13 +1,38 @@
 from flask import Flask, flash, render_template, redirect, url_for, request, session, escape
 from module.database import Database
 import MySQLdb
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token
+import flask, os, socket, subprocess, requests, json, consul
+import urllib2
+from bson.json_util import dumps
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 app.secret_key = "mys3cr3tk3y"
 db = Database()
 
+jwt = JWTManager(app)
+app.config["JWT_SECRET_KEY"] = "blablabla"
+secret="blabla"
+
 db1 = MySQLdb.connect(host="mysqldb", user="cryptouser", passwd="123456", db="cryptodb")
 cur = db1.cursor()
+
+# fetch consul's ip, so that we can talk to it.
+CONSUL_ALIAS = 'consul'
+CONSUL_PORT = '8500'
+CONSUL_IP = subprocess.check_output(['getent', 'hosts', CONSUL_ALIAS]).decode().split()[0]
+# create consul instance (not agent, just python instance)
+con = consul.Consul(host=CONSUL_IP, port=CONSUL_PORT)
+# get logmongo IP
+keyindex, redisapp_ip_bytes = con.kv.get('redisapp')
+redisapp_ip = redisapp_ip_bytes['Value'].decode()
+
+API_ENDPOINT = "http://"+redisapp_ip+"/api/save"
+req = urllib2.Request(API_ENDPOINT)
+req.add_header('Content-Type', 'application/json')
+
+
 
 
 class ServerError(Exception):pass
@@ -34,6 +59,9 @@ def login():
             for row in cur.fetchall():
                 if password_form == row[0]:
                     session['username'] = request.form['username']
+                    access_token = create_access_token(identity=username_form)
+                    data = {"field": username_form, "value": access_token}
+                    response = urllib2.urlopen(req, json.dumps(data))
                     return redirect(url_for('index'))
                 else:
                     error = "Invalid Credential"

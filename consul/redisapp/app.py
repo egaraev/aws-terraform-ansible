@@ -3,8 +3,11 @@ import time
 import json
 from redis import Redis
 import random
-from flask import Flask, render_template,request,redirect,url_for # For flask implementation
+from flask import Flask, render_template,request,redirect,url_for, jsonify # For flask implementation
+from urllib.parse import parse_qs
+from bson.json_util import dumps
 
+ 
 SELF_HOSTNAME = str(socket.gethostname())
 SELF_IP = socket.gethostbyname(SELF_HOSTNAME)
 
@@ -73,6 +76,17 @@ r = Redis(host=redis_ip_only, db=0)
 def hello():
     return render_template('red.html')
 
+	
+@app.route("/api/save", methods=['POST'])
+def create_item():
+    content = request.json
+    field = content['field']
+    value = content['value'] 	
+    ret= r.set(field, value)
+    app.logger.debug(ret)
+    return jsonify(message="Token added sucessfully"), 201
+
+	
 @app.route("/save", methods=['POST'])
 def save():
     field = request.form['field']
@@ -88,6 +102,8 @@ def get():
     value = r.get(field)
     str_value = value.decode('utf-8')
     return render_template('red.html', field=field, value=str_value)
+
+
 	
 	
 @app.route('/health')

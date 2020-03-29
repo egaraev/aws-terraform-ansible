@@ -27,8 +27,8 @@ app = Flask(__name__)
 DATABASE = MongoClient()['restfulapi'] # DB_NAME
 DEBUG = True
 client = MongoClient(mongodb_ip, 27017)
-title = "Flask and MongoDB"
-heading = "Reminder"
+title = "Trading logs storaed in MongoDB"
+heading = "Trading logs"
 
 db = client.restfulapi
 todos = db.todo #Select the collection name
@@ -38,20 +38,26 @@ def redirect_url():
            request.referrer or \
            url_for('index')
 
-@app.route("/list")
+#@app.route("/list")
+#def lists ():
+	#Display the all Tasks
+#	todos_l = todos.find()
+#	a1="active"
+#	return render_template('index.html',a1=a1,todos=todos_l,t=title,h=heading)
+
+@app.route("/")
 def lists ():
 	#Display the all Tasks
 	todos_l = todos.find()
 	a1="active"
 	return render_template('index.html',a1=a1,todos=todos_l,t=title,h=heading)
 
-@app.route("/")
-@app.route("/uncompleted")
-def tasks ():
+#@app.route("/uncompleted")
+#def tasks ():
 	#Display the Uncompleted Tasks
-	todos_l = todos.find({"done":"no"})
-	a2="active"
-	return render_template('index.html',a2=a2,todos=todos_l,t=title,h=heading)
+#	todos_l = todos.find({"done":"no"})
+#	a2="active"
+#	return render_template('index.html',a2=a2,todos=todos_l,t=title,h=heading)
 
 
 @app.route("/completed")

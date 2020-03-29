@@ -8,11 +8,6 @@
 		<script src="{{ url_for('static',filename='assets/emoji.js')}}"></script>
 	</head>
 <body>
-	<h1>{{ h }}</h1>
-	<ul>
-		<li><a href="/list" class="{{ a1 }}">ALL</a></li>
-	</ul>
-	<hr>
 	{% if todos[0] %}
 	<div span="right">
 	<form action="/search"	method="GET" >
@@ -54,7 +49,7 @@
 	<form action="/action" method="POST">
 	<table class="none">
 		<tr>
-			<td><b><big><label>Add a Task : </label></big></b></td>
+			<td><b><big><label>Add a custom Log : </label></big></b></td>
 		</tr>
 		<tr>
 		<td><textarea name="desc" rows="1" cols="30" placeholder="Enter Log Description here..." required></textarea></td>
