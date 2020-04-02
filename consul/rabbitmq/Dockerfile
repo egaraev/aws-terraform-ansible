@@ -1,4 +1,4 @@
-FROM rabbitmq:latest
+FROM rabbitmq:3-management
 RUN apt-get update -y
 RUN apt-get install -y python3-pip python3-dev build-essential
 COPY . /rabbitmq_config
