@@ -17,6 +17,7 @@ import json
 import datetime
 import flask, os, socket, subprocess, requests, json, consul
 import urllib2
+import pika
 
 from pymongo import MongoClient
 #c = Client(api_key=config.key, api_secret=config.secret)   #Configuring bytrex client with API key/secret from config file
@@ -30,8 +31,14 @@ CONSUL_IP = subprocess.check_output(['getent', 'hosts', CONSUL_ALIAS]).decode().
 # create consul instance (not agent, just python instance)
 con = consul.Consul(host=CONSUL_IP, port=CONSUL_PORT)
 
+keyindex, rabbitmq_ip_bytes = con.kv.get('rabbitmq')
+rabbitmq_ip = rabbitmq_ip_bytes['Value'].decode()
+rabbitmq_ip_only = rabbitmq_ip.split(":", 1)
+rabbitmq_ip_only=rabbitmq_ip_only[0]
 
 
+credentials = pika.PlainCredentials('user1', 'pass1')
+connection = pika.BlockingConnection(pika.ConnectionParameters(rabbitmq_ip_only,5672,'/',credentials))
 
 #The main function
 def main():
@@ -59,7 +66,7 @@ def tick():
     current_order_count = order_count()
     bot_mode=parameters()[23]
     now = datetime.datetime.now()
-    print "Global buy parameters configured, moving to market loop"
+	
 
     req = urllib2.Request(API_ENDPOINT)
     req.add_header('Content-Type', 'application/json')
@@ -235,11 +242,15 @@ def tick():
                                 try:
                                     printed = ('    2 - We already have ' + str(
                                         format_float(bought_quantity_sql)) + '  ' + market + ' on our balance')
-                                    db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
-                                    cursor = db.cursor()
-                                    cursor.execute(
-                                        'insert into logs(date, log_entry) values("%s", "%s")' % (currenttime, printed))
-                                    db.commit()
+                                    channel = connection.channel()
+                                    channel.queue_declare(queue='logging')
+                                    channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                    connection.close()
+#                                    db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+#                                    cursor = db.cursor()
+#                                    cursor.execute(
+#                                        'insert into logs(date, log_entry) values("%s", "%s")' % (currenttime, printed))
+#                                    db.commit()
                                 except MySQLdb.Error, e:
                                     print "Error %d: %s" % (e.args[0], e.args[1])
                                     sys.exit(1)
@@ -251,11 +262,14 @@ def tick():
                                 try:
                                     printed = ('    3 - We already have ' + str(
                                         float(status_orders(market, 2))) + ' units of ' + market + ' on our balance')
-                                    db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
-                                    cursor = db.cursor()
-                                    cursor.execute(
-                                        'insert into logs(date, log_entry) values("%s", "%s")' % (currenttime, printed))
-                                    db.commit()
+                                    channel.queue_declare(queue='logging')
+                                    channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                    connection.close()
+#                                    db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+#                                    cursor = db.cursor()
+#                                    cursor.execute(
+#                                        'insert into logs(date, log_entry) values("%s", "%s")' % (currenttime, printed))
+#                                    db.commit()
                                 except MySQLdb.Error, e:
                                     print "Error %d: %s" % (e.args[0], e.args[1])
                                     sys.exit(1)
@@ -296,12 +310,15 @@ def tick():
                     if debug_mode == 1:
                         try:
                             printed = ("    XXX - Bot is working with " + market)
-                            db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
-                            cursor = db.cursor()
-                            cursor.execute(
-                                'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                    currenttime, printed))
-                            db.commit()
+                            channel.queue_declare(queue='logging')
+                            channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                            connection.close()
+#                            db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+#                            cursor = db.cursor()
+#                            cursor.execute(
+#                                'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                    currenttime, printed))
+#                            db.commit()
                         except MySQLdb.Error, e:
                             print "Error %d: %s" % (e.args[0], e.args[1])
                             sys.exit(1)

@@ -16,3 +16,4 @@ urllib3==1.25.6
 Werkzeug==1.0.0
 WTForms==2.2.1
 python-consul
+pika

@@ -37,6 +37,14 @@ services:
 #    environment:
 #      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/flask
 
+  logmysql:
+    build: ./logmysql
+    image: logmysql
+    ports:
+      - "5000"
+    depends_on:
+      - mysqldb
+
 
   logmongo:
     build: ./logmongo

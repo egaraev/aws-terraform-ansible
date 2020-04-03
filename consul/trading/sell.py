@@ -17,6 +17,7 @@ import json
 import datetime
 import flask, os, socket, subprocess, requests, json, consul
 import urllib2
+import pika
 from pymongo import MongoClient
 #c = Client(api_key=config.key, api_secret=config.secret)   #Configuring bytrex client with API key/secret from config file
 c=Client(api_key="", api_secret="")
@@ -28,6 +29,9 @@ CONSUL_PORT = '8500'
 CONSUL_IP = subprocess.check_output(['getent', 'hosts', CONSUL_ALIAS]).decode().split()[0]
 # create consul instance (not agent, just python instance)
 con = consul.Consul(host=CONSUL_IP, port=CONSUL_PORT)
+
+
+
 
 TICK_INTERVAL = 60  # seconds
 
@@ -55,6 +59,15 @@ def tick():
     API_ENDPOINT = "http://"+logmongo_ip+"/api/v1/items"
     req = urllib2.Request(API_ENDPOINT)
     req.add_header('Content-Type', 'application/json')
+	
+    keyindex, rabbitmq_ip_bytes = con.kv.get('rabbitmq')
+    rabbitmq_ip = rabbitmq_ip_bytes['Value'].decode()
+    rabbitmq_ip_only = rabbitmq_ip.split(":", 1)
+    rabbitmq_ip_only=rabbitmq_ip_only[0]
+    credentials = pika.PlainCredentials('user1', 'pass1')
+    connection = pika.BlockingConnection(pika.ConnectionParameters(rabbitmq_ip_only,5672,'/',credentials))
+
+	
     buy_size = parameters()[0] #The size for opening orders for STOP_LOSS mode
     stop_bot_force = parameters()[4]  #If stop_bot_force==1 we  stop bot and close all orders
     stop_bot = int(parameters()[11])
@@ -232,7 +245,10 @@ def tick():
                                 data = {"desc": printed, "date": currtime}
                                 response = urllib2.urlopen(req, json.dumps(data))
                                 cursor = db.cursor()
-                                cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (currenttime, printed))
+                                channel.queue_declare(queue='logging')
+                                channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                connection.close()
+#                                cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (currenttime, printed))
                                 cursor.execute('update orders set reason_close =%s, sell_time=%s where active=1 and market =%s', ("33 , Force_stop_bot p:    " + str(format_float(newbid)) + "    t:   " + str(currenttime),currtime, market))
                                 cursor.execute('update orders set active = 0 where market =("%s")' % market)
                                 db.commit()
@@ -252,14 +268,15 @@ def tick():
                     if debug_mode == 1:
                         try:
                             printed = ("    XXX - Bot is working with " + market)
-                            db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
-                            data = {"desc": printed, "date": currtime}
-                            response = urllib2.urlopen(req, json.dumps(data))
-                            cursor = db.cursor()
-                            cursor.execute(
-                                'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                    currenttime, printed))
-                            db.commit()
+#                            db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+                            channel.queue_declare(queue='logging')
+                            channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                            connection.close()
+#                            cursor = db.cursor()
+#                            cursor.execute(
+#                                'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                    currenttime, printed))
+#                            db.commit()
                         except MySQLdb.Error, e:
                             print "Error %d: %s" % (e.args[0], e.args[1])
                             sys.exit(1)
@@ -297,9 +314,11 @@ def tick():
                                     response = urllib2.urlopen(req, json.dumps(data))
                                     db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                     cursor = db.cursor()
-                                    cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (
-                                        currenttime, printed))
-                                    # cursor.execute('update orders set active = 0, reason_close = "12 Take profit" where market =("%s")' % market)
+                                    channel.queue_declare(queue='logging')
+                                    channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                    connection.close()
+#                                    cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                        currenttime, printed))
                                     cursor.execute(
                                         'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s', (
                                             "4  TP , price:    " + str(
@@ -336,13 +355,14 @@ def tick():
                                     try:
                                         printed = (
                                             "    7 - We have GREEN candle for " + market + " and let`s wait it to be up")
-                                        data = {"desc": printed, "date": currtime}
-                                        response = urllib2.urlopen(req, json.dumps(data))
-                                        db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
-                                        cursor = db.cursor()
-                                        cursor.execute(
-                                            'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                currenttime, printed))
+                                        channel.queue_declare(queue='logging')
+                                        channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                        connection.close()
+#                                        db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+#                                        cursor = db.cursor()
+#                                        cursor.execute(
+#                                            'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                currenttime, printed))
                                         db.commit()
                                     except MySQLdb.Error, e:
                                         print "Error %d: %s" % (e.args[0], e.args[1])
@@ -394,10 +414,12 @@ def tick():
                                         db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                              "cryptodb")
                                         cursor = db.cursor()
-                                        cursor.execute(
-                                            'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                currenttime, printed))
-                                        # cursor.execute('update orders set reason_close = "225 AI take profit" where active=1 and market =("%s")' % market)
+                                        channel.queue_declare(queue='logging')
+                                        channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                        connection.close()
+#                                        cursor.execute(
+#                                            'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                currenttime, printed))
                                         cursor.execute(
                                             'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s',
                                             (
@@ -439,7 +461,7 @@ def tick():
                                         ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' + ' or ' + str(
                                         format_float((
                                                          newbid * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
-                                        # print ('22 - Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(ask)) + '  and losing  ' + str(format_float(ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' ' or ' + str(format_float((ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
+
                                         try:
                                             printed = ('  12 -Selling ' + str(format_float(
                                                 sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
@@ -449,11 +471,14 @@ def tick():
                                                              newbid * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel.queue_declare(queue='logging')
+                                            channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                            connection.close()
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                             cursor = db.cursor()
-                                            cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                currenttime, printed))
-                                            # cursor.execute('update orders set active = 0, reason_close = "12 Take profit" where market =("%s")' % market)
+#                                            cursor.execute('insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                currenttime, printed))
+
                                             cursor.execute(
                                                 'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s', (
                                                     "3  fast SL, price:    " + str(
@@ -489,7 +514,6 @@ def tick():
                                             sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                         format_float(newbid)) + '  and get  + ' + str(
                                         format_float(serf * BTC_price)) + ' USD')
-                                        # print ('22 - Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(ask)) + '  and losing  ' + str(format_float(ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' ' or ' + str(format_float((ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
                                         try:
                                             printed = ('    14  - Trying to sell ' + str(
                                                 format_float(
@@ -498,13 +522,15 @@ def tick():
                                                 format_float(serf * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel.queue_declare(queue='logging')
+                                            channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                            connection.close()
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                  "cryptodb")
                                             cursor = db.cursor()
-                                            cursor.execute(
-                                                'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                    currenttime, printed))
-                                            # cursor.execute('update orders set reason_close = "225 AI take profit" where active=1 and market =("%s")' % market)
+#                                            cursor.execute(
+#                                                'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                    currenttime, printed))
                                             cursor.execute(
                                                 'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s',
                                                 (
@@ -665,7 +691,6 @@ def tick():
                                 elif (newbid * (1 + profit / 2) < (bought_price_sql )): # #WAS profit2
 
                                          print ('   16  -Trying to Sell ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(newbid)) + '  and lose  ' + str(format_float(serf * BTC_price)) + ' USD')
-                                    # print ('Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(ask)) + '  and losing  ' + str(format_float(ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' ' or ' + str(format_float((ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
                                          try:
                                              printed = ('   16  -Trying to Sell ' + str(
                                                  format_float(
@@ -677,9 +702,12 @@ def tick():
                                              db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                   "cryptodb")
                                              cursor = db.cursor()
-                                             cursor.execute(
-                                                 'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                     currenttime, printed))
+                                             channel.queue_declare(queue='logging')
+                                             channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                             connection.close()
+#                                             cursor.execute(
+#                                                 'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                     currenttime, printed))
                                              cursor.execute(
                                                  'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s',
                                                  ("13 small SL, p:   " + str(
@@ -712,7 +740,6 @@ def tick():
                                             sell_quantity_sql)) + ' units of ' + market + ' for ' + str(
                                         format_float(newbid)) + '  and get + ' + str(
                                         format_float(serf * BTC_price)) + ' USD')
-                                        # print ('22 - Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(ask)) + '  and losing  ' + str(format_float(ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' ' or ' + str(format_float((ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
                                         try:
                                             printed = ('  18  - Trying to Sell ' + str(
                                                 format_float(
@@ -721,12 +748,15 @@ def tick():
                                                 format_float(serf * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel.queue_declare(queue='logging')
+                                            channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                            connection.close()
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                  "cryptodb")
                                             cursor = db.cursor()
-                                            cursor.execute(
-                                                'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                    currenttime, printed))
+#                                            cursor.execute(
+#                                                'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                    currenttime, printed))
                                             cursor.execute(
                                                 'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s',
                                                 ("14  ha TP, p:   " + str(
@@ -762,7 +792,6 @@ def tick():
                                         format_float(newbid)) + '  and get or lose  ' + str(
                                         format_float(serf * BTC_price)) + ' USD')
 
-                                        # print ('Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(ask)) + '  and losing  ' + str(format_float(ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' ' or ' + str(format_float((ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
                                         try:
                                             printed = ('  20 - Trying to Sell ' + str(
                                                 format_float(
@@ -771,12 +800,15 @@ def tick():
                                                 format_float(serf * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel.queue_declare(queue='logging')
+                                            channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                            connection.close()
                                             db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                  "cryptodb")
                                             cursor = db.cursor()
-                                            cursor.execute(
-                                                'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                    currenttime, printed))
+#                                            cursor.execute(
+#                                                'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                    currenttime, printed))
                                             cursor.execute(
                                                 'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s',
                                                 ("7  BTC SL, p:   " + str(
@@ -804,7 +836,7 @@ def tick():
 
                                 elif (newbid * bought_quantity_sql * (1 + profit) < (bought_price_sql * bought_quantity_sql)): # #WAS profit2
                                             print ('  22 Prod - Trying to sell ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(newbid)) + '  and lose  ' + str(format_float(serf * BTC_price)) + ' USD')
-                                            # print ('Selling ' + str(format_float(sell_quantity_sql)) + ' units of ' + market + ' for ' + str(format_float(ask)) + '  and losing  ' + str(format_float(ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql)) + ' BTC' ' or ' + str(format_float((ask * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
+
                                             try:
                                                 printed = ('  22 Prod - Trying to sell ' + str(
                                                     format_float(
@@ -813,12 +845,15 @@ def tick():
                                                     format_float(serf * BTC_price)) + ' USD')
                                                 data = {"desc": printed, "date": currtime}
                                                 response = urllib2.urlopen(req, json.dumps(data))
+                                                channel.queue_declare(queue='logging')
+                                                channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                                connection.close()
                                                 db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                      "cryptodb")
                                                 cursor = db.cursor()
-                                                cursor.execute(
-                                                    'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                        currenttime, printed))
+#                                                cursor.execute(
+#                                                    'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                        currenttime, printed))
                                                 cursor.execute(
                                                     'update orders set reason_close =%s, sell_time=%s  where active=1 and market =%s',
                                                     (" 22  SL, p:   " + str(
