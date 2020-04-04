@@ -4,7 +4,7 @@
   "address": "logmongo",
   "port": 5000,
   "check": {
-    "name": "Check FlaskApp health",
+    "name": "Check LogMongo health",
     "http": "http://logmongo:5000/health",
     "method": "GET",
     "interval": "10s",

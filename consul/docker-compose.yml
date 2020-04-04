@@ -19,14 +19,6 @@ services:
     links:
       - consul
             
-#  web:
-#    build: ./web
-#    ports:
-#      - "5000"
-#    environment:
-#      - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/web
-#    volumes:
-#      - .:/code
 
 #  flaskapp:
 #    build: ./flaskapp
@@ -80,6 +72,8 @@ services:
     environment:
       - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:mgmt.localhost
 
+       
+      
       
   trading:
     build: ./trading

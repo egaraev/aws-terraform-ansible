@@ -245,6 +245,7 @@ def tick():
                                 data = {"desc": printed, "date": currtime}
                                 response = urllib2.urlopen(req, json.dumps(data))
                                 cursor = db.cursor()
+                                channel = connection.channel()
                                 channel.queue_declare(queue='logging')
                                 channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                 connection.close()
@@ -269,6 +270,7 @@ def tick():
                         try:
                             printed = ("    XXX - Bot is working with " + market)
 #                            db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+                            channel = connection.channel()
                             channel.queue_declare(queue='logging')
                             channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                             connection.close()
@@ -314,6 +316,7 @@ def tick():
                                     response = urllib2.urlopen(req, json.dumps(data))
                                     db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
                                     cursor = db.cursor()
+                                    channel = connection.channel()
                                     channel.queue_declare(queue='logging')
                                     channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                     connection.close()
@@ -355,6 +358,7 @@ def tick():
                                     try:
                                         printed = (
                                             "    7 - We have GREEN candle for " + market + " and let`s wait it to be up")
+                                        channel = connection.channel()
                                         channel.queue_declare(queue='logging')
                                         channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                         connection.close()
@@ -379,14 +383,16 @@ def tick():
 
                                     try:
                                         printed = ("   8  - We have good short term trend for " + market)
-                                        data = {"desc": printed, "date": currtime}
-                                        response = urllib2.urlopen(req, json.dumps(data))
-                                        db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
-                                        cursor = db.cursor()
-                                        cursor.execute(
-                                            'insert into logs(date, log_entry) values("%s", "%s")' % (
-                                                currenttime, printed))
-                                        db.commit()
+                                        channel = connection.channel()
+                                        channel.queue_declare(queue='logging')
+                                        channel.basic_publish(exchange='', routing_key='logging', body=printed)    
+                                        connection.close()
+#                                        db = MySQLdb.connect("mysqldb", "cryptouser", "123456", "cryptodb")
+#                                        cursor = db.cursor()
+#                                        cursor.execute(
+#                                            'insert into logs(date, log_entry) values("%s", "%s")' % (
+#                                                currenttime, printed))
+#                                        db.commit()
                                     except MySQLdb.Error, e:
                                         print "Error %d: %s" % (e.args[0], e.args[1])
                                         sys.exit(1)
@@ -414,6 +420,7 @@ def tick():
                                         db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                              "cryptodb")
                                         cursor = db.cursor()
+                                        channel = connection.channel()
                                         channel.queue_declare(queue='logging')
                                         channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                         connection.close()
@@ -471,6 +478,7 @@ def tick():
                                                              newbid * bought_quantity_sql - bought_price_sql * bought_quantity_sql) * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel = connection.channel()
                                             channel.queue_declare(queue='logging')
                                             channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                             connection.close()
@@ -522,6 +530,7 @@ def tick():
                                                 format_float(serf * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel = connection.channel()
                                             channel.queue_declare(queue='logging')
                                             channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                             connection.close()
@@ -702,6 +711,7 @@ def tick():
                                              db = MySQLdb.connect("mysqldb", "cryptouser", "123456",
                                                                   "cryptodb")
                                              cursor = db.cursor()
+                                             channel = connection.channel()
                                              channel.queue_declare(queue='logging')
                                              channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                              connection.close()
@@ -748,6 +758,7 @@ def tick():
                                                 format_float(serf * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel = connection.channel()
                                             channel.queue_declare(queue='logging')
                                             channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                             connection.close()
@@ -800,6 +811,7 @@ def tick():
                                                 format_float(serf * BTC_price)) + ' USD')
                                             data = {"desc": printed, "date": currtime}
                                             response = urllib2.urlopen(req, json.dumps(data))
+                                            channel = connection.channel()
                                             channel.queue_declare(queue='logging')
                                             channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                             connection.close()
@@ -845,6 +857,7 @@ def tick():
                                                     format_float(serf * BTC_price)) + ' USD')
                                                 data = {"desc": printed, "date": currtime}
                                                 response = urllib2.urlopen(req, json.dumps(data))
+                                                channel = connection.channel()
                                                 channel.queue_declare(queue='logging')
                                                 channel.basic_publish(exchange='', routing_key='logging', body=printed)    
                                                 connection.close()
