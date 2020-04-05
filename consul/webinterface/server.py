@@ -6,6 +6,8 @@ import flask, os, socket, subprocess, requests, json, consul
 import urllib2
 from bson.json_util import dumps
 from flask import Flask, request, jsonify
+import pymysql
+import memcache
 
 app = Flask(__name__)
 app.secret_key = "mys3cr3tk3y"
@@ -31,6 +33,8 @@ redisapp_ip = redisapp_ip_bytes['Value'].decode()
 API_ENDPOINT = "http://"+redisapp_ip+"/api/save"
 req = urllib2.Request(API_ENDPOINT)
 req.add_header('Content-Type', 'application/json')
+
+
 
 
 
@@ -233,7 +237,31 @@ def closedorders():
 
 @app.route('/logs')
 def logs():
-    data = db.read_logs(None)
+
+
+	
+    memc  = memcache.Client(['memcached:11211'], debug=1);
+    result = memc.get('toplogs')
+    if result is None:
+        print("got a miss, need to get the data from db")
+        result = query_db(result)
+        if result == 'invalid':
+            print("requested data does not exist in db")
+        else:
+            print("returning data to client from db")
+            for row in result:
+                print ("%s, %s" % (row[0], row[1]))
+            print("setting the data to memcache")
+            memc .set('toplogs', result, 60)
+
+    else:
+        print("got the data directly from memcache")
+        for row in result:      
+            print ("%s, %s" % (str(row[0]), str(row[1])))
+		
+
+#    data = db.read_logs(None)
+    data=result
 
     if 'username' in session:
         username_session = escape(session['username']).capitalize()
@@ -341,6 +369,18 @@ def addmarket():
 def page_not_found(error):
     return render_template('error.html')
 
+	
+def query_db(result):
+    db_connection = pymysql.connect("mysqldb","cryptouser","123456","cryptodb" )
+    c = db_connection.cursor()
+    try:
+        c.execute('SELECT date, log_entry FROM logs order by log_id DESC limit 10')
+        data = c.fetchall()
+        db_connection.close()
+    except:
+        data = 'invalid'
+    return data	
+	
 
 if __name__ == '__main__':
     app.run(debug = True, port=5000, host="0.0.0.0")

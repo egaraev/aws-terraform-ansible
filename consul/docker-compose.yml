@@ -86,7 +86,17 @@ services:
       - SERVICE_TAGS=traefik.enable=true,traefik.frontend.entryPoints=http,traefik.frontend.rule=Host:localhost;PathPrefixStrip:/debug
     links:
      - mysqldb 
-      
+
+
+  memcached:
+    image: rbekker87/memcached:alpine
+    tty: true
+    ports:
+      - "11211:11211"
+    links:
+      - consul      
+
+     
       
   redis:
     build: ./redis
