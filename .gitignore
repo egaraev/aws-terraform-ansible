@@ -1,3 +1,6 @@
 .terraform
 mysql_db
 mongo_db
+terraform.tfstate.backup
+terraform.tfstate
+
