@@ -180,7 +180,7 @@ resource "aws_autoscaling_group" "web" {
   ]
 
   launch_configuration = "${aws_launch_configuration.web.name}"
-#  availability_zones = ["eu-central-1a", "eu-central-1b"]
+
 
   enabled_metrics = [
     "GroupMinSize",
