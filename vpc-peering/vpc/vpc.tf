@@ -5,6 +5,8 @@ variable "cluster_name" {}
 variable "region_name" {}
 variable "nb_nodes" {}
 variable "vpc_cidr" {}
+variable "peering_id" {}
+
 
 # Default Variables
 
@@ -42,6 +44,7 @@ variable "availability_zone" {
 
 provider "aws" {
     region = "${var.region}"
+	version = "~> 2.7"
 }
 
 # Network Resources
@@ -98,14 +101,33 @@ resource "aws_internet_gateway" "gw" {
     }
 }
 
+
+
+
+
+#resource "aws_route" "peering-route" {
+#  route_table_id            = "${aws_route_table.public-rt.id}"
+#  destination_cidr_block    = "${var.vpc_cidr}"
+#  vpc_peering_connection_id = "${var.peering_id}"
+#}
+
+
+
+
 resource "aws_route_table" "public-rt" {
     vpc_id = "${aws_vpc.vpc.id}"
 
     route {
         cidr_block = "0.0.0.0/0"
         gateway_id = "${aws_internet_gateway.gw.id}"
-    }
-
+    }	
+	
+	
+    route {
+        cidr_block = "${var.vpc_cidr}"
+        vpc_peering_connection_id = "${var.peering_id}"
+    }	
+	
     tags = {
         Name = "${var.cluster_name}-${var.region_name}-subnet-rt"
     }

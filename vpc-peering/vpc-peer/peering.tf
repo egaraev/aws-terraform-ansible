@@ -9,11 +9,13 @@ data "aws_caller_identity" "current" {}
 
 provider "aws" {
     region = "${var.request_region}"
+	version = "~> 2.7"
 }
 
 provider "aws" {
   alias  = "peer"
   region = "${var.accept_region}"
+  version = "~> 2.7"
 }
 
 # Requester's side of the connection.
@@ -29,6 +31,8 @@ resource "aws_vpc_peering_connection" "peer" {
   }
 }
 
+
+
 # Accepter's side of the connection.
 resource "aws_vpc_peering_connection_accepter" "peer" {
   provider                  = "aws.peer"
@@ -38,4 +42,6 @@ resource "aws_vpc_peering_connection_accepter" "peer" {
   tags = {
     Side = "Accepter"
   }
-} 
+}
+ 
+

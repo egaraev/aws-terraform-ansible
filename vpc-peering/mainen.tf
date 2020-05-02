@@ -13,6 +13,7 @@ module "region-1" {
     region_name = "east"
     vpc_cidr = "10.0.0.0/24"
     nb_nodes = "${var.nodes_per_region}"
+	peering_id = module.vpc_peer_1.peering_connection_id
 }
 
 module "region-2" {
@@ -22,6 +23,7 @@ module "region-2" {
     region_name = "west"
     vpc_cidr = "11.1.1.0/24"
     nb_nodes = "${var.nodes_per_region}"
+	peering_id = module.vpc_peer_1.peering_connection_id
 }
 
 module "vpc_peer_1" {
