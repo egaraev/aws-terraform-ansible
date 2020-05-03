@@ -123,10 +123,10 @@ resource "aws_route_table" "public-rt" {
     }	
 	
 	
-    route {
-        cidr_block = "${var.vpc_cidr}"
-        vpc_peering_connection_id = "${var.peering_id}"
-    }	
+#    route {
+#        cidr_block = "${var.vpc_cidr}"
+#        vpc_peering_connection_id = "${var.peering_id}"
+#    }	
 	
     tags = {
         Name = "${var.cluster_name}-${var.region_name}-subnet-rt"
